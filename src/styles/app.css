@@ -268,13 +268,6 @@ body {
 .reader-pages.double .reader-page { flex: 1; max-width: 50vw; }
 .reader-pages.double .reader-page img { max-width: 100%; }
 
-/* Click zones */
-.click-zone {
-  position: absolute; top: 0; bottom: 0; width: 30%;
-  z-index: 10; cursor: pointer;
-}
-.click-zone.left { left: 0; }
-.click-zone.right { right: 0; }
 
 /* Reader UI overlay */
 .reader-ui {

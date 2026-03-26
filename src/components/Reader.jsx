@@ -18,14 +18,10 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
     })
   }, [volume.path])
 
-  // Save progress whenever page changes
   useEffect(() => {
-    if (pages.length > 0) {
-      onProgress(volume.path, current, pages.length)
-    }
+    if (pages.length > 0) onProgress(volume.path, current, pages.length)
   }, [current, pages.length])
 
-  // Preload adjacent pages so navigation is instant
   useEffect(() => {
     if (pages.length === 0) return
     const toPreload = [current + 1, current + 2, current + 3, current - 1]
@@ -36,13 +32,11 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
     })
   }, [current, pages])
 
-  // Auto-hide UI
   function showUITemporarily() {
     setShowUI(true)
     clearTimeout(uiTimer.current)
     uiTimer.current = setTimeout(() => setShowUI(false), 3000)
   }
-
   useEffect(() => () => clearTimeout(uiTimer.current), [])
 
   const totalPages = pages.length
@@ -81,8 +75,6 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [goNext, goPrev, onClose])
 
-  const displayIndices = getDisplayIndices()
-
   function pageUrl(index) {
     if (index >= totalPages) return null
     return `manga://page?cbz=${encodeURIComponent(volume.path)}&file=${encodeURIComponent(pages[index])}`
@@ -95,22 +87,28 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
     </div>
   )
 
+  function handleReaderClick(e) {
+    if (e.target.closest('button, input')) return
+    showUITemporarily()
+    const mid = e.currentTarget.getBoundingClientRect().width / 2
+    if (e.clientX < mid) goPrev()
+    else goNext()
+  }
+
   return (
-    <div className="reader" onMouseMove={showUITemporarily} onClick={showUITemporarily}>
-      {/* Pages */}
+    <div
+      className="reader"
+      onMouseMove={showUITemporarily}
+      onClick={handleReaderClick}
+    >
       <div className={`reader-pages ${doublePage ? 'double' : 'single'}`}>
-        {displayIndices.map(i => (
+        {getDisplayIndices().map(i => (
           <div key={i} className="reader-page">
             <img src={pageUrl(i)} alt={`Page ${i + 1}`} draggable={false} />
           </div>
         ))}
       </div>
 
-      {/* Click zones */}
-      <div className="click-zone left" onClick={e => { e.stopPropagation(); goPrev() }} />
-      <div className="click-zone right" onClick={e => { e.stopPropagation(); goNext() }} />
-
-      {/* UI overlay */}
       <div className={`reader-ui ${showUI ? 'visible' : ''}`}>
         <div className="reader-top-bar">
           <button className="reader-btn" onClick={onClose}>← Back</button>
@@ -131,7 +129,6 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
 
         <div className="reader-bottom-bar">
           <button className="nav-btn" onClick={goPrev} disabled={current === 0}>‹ Prev</button>
-
           <div className="reader-progress-wrap">
             <input
               type="range"
@@ -152,7 +149,6 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
               </span>
             </div>
           </div>
-
           <button className="nav-btn" onClick={goNext} disabled={current >= totalPages - 1}>Next ›</button>
         </div>
       </div>
