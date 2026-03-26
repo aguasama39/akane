@@ -1,0 +1,47 @@
+{
+  "name": "akane",
+  "version": "1.0.0",
+  "description": "Sleek manga reader desktop app",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite build --watch\" \"wait-on dist-react/index.html && electron .\"",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "dist": "vite build && electron-builder --win --x64"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.0.0",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "vite": "^5.0.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.akane.app",
+    "productName": "Akane",
+    "directories": { "output": "dist" },
+    "files": [
+      "electron/**/*",
+      "dist-react/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
