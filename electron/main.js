@@ -2,7 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog, protocol, nativeImage } = require('
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const JSZip = require('jszip');
+const { configure, ZipReader, Uint8ArrayReader, Uint8ArrayWriter } = require('@zip.js/zip.js');
+configure({ useWebWorkers: false });
 
 let mainWindow;
 const zipCache = new Map();
@@ -31,9 +32,11 @@ function sortImages(names) {
 async function getZip(cbzPath) {
   if (zipCache.has(cbzPath)) return zipCache.get(cbzPath);
   const data = await fs.promises.readFile(cbzPath);
-  const zip = await JSZip.loadAsync(data);
-  zipCache.set(cbzPath, zip);
-  return zip;
+  const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(data)));
+  const entries = await reader.getEntries();
+  const entryMap = new Map(entries.filter(e => !e.directory).map(e => [e.filename, e]));
+  zipCache.set(cbzPath, entryMap);
+  return entryMap;
 }
 
 // manga:// protocol — serves pages directly from zip
@@ -79,9 +82,9 @@ app.whenReady().then(() => {
       }
 
       const zip = await getZip(cbzPath);
-      const entry = zip.file(filename);
+      const entry = zip.get(filename);
       if (!entry) return new Response('Not found', { status: 404 });
-      const buffer = await entry.async('arraybuffer');
+      const buffer = (await entry.getData(new Uint8ArrayWriter())).buffer;
       cachePage(key, buffer);
       return new Response(buffer, { headers });
     } catch (e) {
@@ -166,7 +169,7 @@ ipcMain.handle('add-series', async () => {
   // Get page count and cover for first volume
   try {
     const zip = await getZip(volumes[0].path);
-    const pages = sortImages(Object.keys(zip.files));
+    const pages = sortImages([...zip.keys()]);
     volumes[0].pageCount = pages.length;
   } catch (_) {}
 
@@ -299,7 +302,7 @@ ipcMain.handle('add-cbz', async () => {
     let pageCount = 0;
     try {
       const zip = await getZip(filePath);
-      pageCount = sortImages(Object.keys(zip.files)).length;
+      pageCount = sortImages([...zip.keys()]).length;
     } catch (_) {}
 
     series.push({
@@ -322,7 +325,7 @@ ipcMain.handle('add-cbz', async () => {
 ipcMain.handle('open-volume', async (_e, cbzPath) => {
   try {
     const zip = await getZip(cbzPath);
-    const pages = sortImages(Object.keys(zip.files));
+    const pages = sortImages([...zip.keys()]);
     return { pages, total: pages.length };
   } catch (err) {
     return { pages: [], total: 0 };
@@ -356,11 +359,11 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
 
     // Extract first page from zip
     const zip = await getZip(cbzPath);
-    const pages = sortImages(Object.keys(zip.files));
+    const pages = sortImages([...zip.keys()]);
     if (pages.length === 0) return null;
 
-    const entry = zip.file(pages[0]);
-    const buffer = Buffer.from(await entry.async('arraybuffer'));
+    const entry = zip.get(pages[0]);
+    const buffer = Buffer.from(await entry.getData(new Uint8ArrayWriter()));
 
     // Resize to thumbnail (200px wide) and save as JPEG
     const img = nativeImage.createFromBuffer(buffer);
