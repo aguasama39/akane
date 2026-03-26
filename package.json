@@ -1,6 +1,6 @@
 {
   "name": "akane",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sleek manga reader desktop app",
   "main": "electron/main.js",
   "scripts": {
