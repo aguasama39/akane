@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { configure, ZipReader, Uint8ArrayReader, Uint8ArrayWriter } = require('@zip.js/zip.js');
+const { createExtractorFromData } = require('node-unrar-js');
 configure({ useWebWorkers: false });
 
 let mainWindow;
@@ -23,6 +24,9 @@ function cachePage(key, buffer) {
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.avif': 'image/avif' };
 
+function isArchive(name) { return /\.(cbz|cbr)$/i.test(name); }
+function stripArchiveExt(name) { return path.basename(name).replace(/\.(cbz|cbr)$/i, ''); }
+
 function sortImages(names) {
   return names
     .filter(n => IMAGE_EXTS.has(path.extname(n).toLowerCase()))
@@ -39,6 +43,35 @@ async function getZip(cbzPath) {
   return entryMap;
 }
 
+async function getCbr(cbrPath) {
+  if (zipCache.has(cbrPath)) return zipCache.get(cbrPath);
+  const buf = await fs.promises.readFile(cbrPath);
+  const uint8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  const extractor = await createExtractorFromData({ data: uint8 });
+  const list = extractor.getFileList();
+  const headers = [...list.fileHeaders].filter(h => !h.flags.directory);
+  const entryMap = new Map();
+  for (const header of headers) {
+    const name = header.name;
+    entryMap.set(name, {
+      filename: name,
+      getData: async () => {
+        const ext = await createExtractorFromData({ data: uint8 });
+        const result = ext.extract({ files: [name] });
+        const files = [...result.files];
+        if (!files[0]?.extraction) throw new Error('Extraction failed: ' + name);
+        return files[0].extraction; // Uint8Array
+      },
+    });
+  }
+  zipCache.set(cbrPath, entryMap);
+  return entryMap;
+}
+
+function getArchive(filePath) {
+  return path.extname(filePath).toLowerCase() === '.cbr' ? getCbr(filePath) : getZip(filePath);
+}
+
 // manga:// protocol — serves pages directly from zip
 protocol.registerSchemesAsPrivileged([
   { scheme: 'manga', privileges: { secure: true, supportFetchAPI: true, bypassCSP: true } }
@@ -51,7 +84,7 @@ function watchLibraryFolder(libraryPath) {
   const debounceMap = new Map();
   const watcher = fs.watch(libraryPath, { recursive: true }, (eventType, filename) => {
     if (!filename) return;
-    if (!filename.toLowerCase().endsWith('.cbz')) return;
+    if (!isArchive(filename)) return;
 
     if (debounceMap.has(filename)) clearTimeout(debounceMap.get(filename));
     debounceMap.set(filename, setTimeout(() => {
@@ -81,7 +114,7 @@ app.whenReady().then(() => {
         return new Response(pageCache.get(key), { headers });
       }
 
-      const zip = await getZip(cbzPath);
+      const zip = await getArchive(cbzPath);
       const entry = zip.get(filename);
       if (!entry) return new Response('Not found', { status: 404 });
       const buffer = (await entry.getData(new Uint8ArrayWriter())).buffer;
@@ -155,11 +188,11 @@ ipcMain.handle('add-series', async () => {
 
   const entries = fs.readdirSync(folderPath, { withFileTypes: true });
   const volumes = entries
-    .filter(e => e.isFile() && e.name.toLowerCase().endsWith('.cbz'))
+    .filter(e => e.isFile() && isArchive(e.name))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
     .map((e, i) => ({
       id: `${Date.now()}-${i}`,
-      name: path.basename(e.name, '.cbz'),
+      name: stripArchiveExt(e.name),
       path: path.join(folderPath, e.name),
       pageCount: 0,
     }));
@@ -168,7 +201,7 @@ ipcMain.handle('add-series', async () => {
 
   // Get page count and cover for first volume
   try {
-    const zip = await getZip(volumes[0].path);
+    const zip = await getArchive(volumes[0].path);
     const pages = sortImages([...zip.keys()]);
     volumes[0].pageCount = pages.length;
   } catch (_) {}
@@ -203,11 +236,11 @@ async function scanLibraryFolder(libraryPath) {
 
     if (entry.isDirectory()) {
       const cbzFiles = fs.readdirSync(fullPath, { withFileTypes: true })
-        .filter(e => e.isFile() && e.name.toLowerCase().endsWith('.cbz'))
+        .filter(e => e.isFile() && isArchive(e.name))
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
         .map(e => ({
           id: `${Date.now()}-${Math.random()}`,
-          name: path.basename(e.name, '.cbz'),
+          name: stripArchiveExt(e.name),
           path: path.join(fullPath, e.name),
           pageCount: 0,
         }));
@@ -222,8 +255,8 @@ async function scanLibraryFolder(libraryPath) {
         volumes: cbzFiles,
       });
 
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.cbz')) {
-      const name = path.basename(entry.name, '.cbz');
+    } else if (entry.isFile() && isArchive(entry.name)) {
+      const name = stripArchiveExt(entry.name);
       results.push({
         id: `cbz-${Date.now()}-${Math.random()}`,
         name,
@@ -291,17 +324,17 @@ ipcMain.handle('refresh-library', async (_e, existingVolumePaths, existingFolder
 ipcMain.handle('add-cbz', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Comic Book Archive', extensions: ['cbz'] }],
-    title: 'Add CBZ Files',
+    filters: [{ name: 'Comic Book Archive', extensions: ['cbz', 'cbr'] }],
+    title: 'Add Comic Files',
   });
   if (result.canceled) return [];
 
   const series = [];
   for (const filePath of result.filePaths) {
-    const name = path.basename(filePath, '.cbz');
+    const name = stripArchiveExt(filePath);
     let pageCount = 0;
     try {
-      const zip = await getZip(filePath);
+      const zip = await getArchive(filePath);
       pageCount = sortImages([...zip.keys()]).length;
     } catch (_) {}
 
@@ -324,7 +357,7 @@ ipcMain.handle('add-cbz', async () => {
 // ── Open a volume — returns sorted page filenames ─────────────────────────
 ipcMain.handle('open-volume', async (_e, cbzPath) => {
   try {
-    const zip = await getZip(cbzPath);
+    const zip = await getArchive(cbzPath);
     const pages = sortImages([...zip.keys()]);
     return { pages, total: pages.length };
   } catch (err) {
@@ -357,8 +390,8 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
       return `file://${cachePath.replace(/\\/g, '/')}`;
     }
 
-    // Extract first page from zip
-    const zip = await getZip(cbzPath);
+    // Extract first page from archive
+    const zip = await getArchive(cbzPath);
     const pages = sortImages([...zip.keys()]);
     if (pages.length === 0) return null;
 

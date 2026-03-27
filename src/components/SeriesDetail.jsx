@@ -1,23 +1,145 @@
 import { useState, useEffect } from 'react'
 
-export default function SeriesDetail({ series, progress, onOpen }) {
+export default function SeriesDetail({ series, progress, onOpen, onUpdateSeries }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState({
+    author: series.author || '',
+    year: series.year || '',
+    synopsis: series.synopsis || '',
+  })
+  const [pageCounts, setPageCounts] = useState({})
+
+  // Fetch page counts for volumes that don't have them yet
+  useEffect(() => {
+    const missing = series.volumes.filter(v => !v.pageCount)
+    if (missing.length === 0) return
+    Promise.all(
+      missing.map(v => window.api.openVolume(v.path).then(({ total }) => ({ id: v.id, total })))
+    ).then(results => {
+      const counts = {}
+      results.forEach(({ id, total }) => { counts[id] = total })
+      setPageCounts(counts)
+      const updatedVolumes = series.volumes.map(v => ({
+        ...v,
+        pageCount: v.pageCount || counts[v.id] || 0,
+      }))
+      onUpdateSeries(series.id, { volumes: updatedVolumes })
+    })
+  }, [series.id])
+
+  const totalPages = series.volumes.reduce((sum, v) => {
+    return sum + (v.pageCount || pageCounts[v.id] || 0)
+  }, 0)
+
+  function saveEdit() {
+    onUpdateSeries(series.id, { author: draft.author, year: draft.year, synopsis: draft.synopsis })
+    setEditing(false)
+  }
+
+  function cancelEdit() {
+    setDraft({ author: series.author || '', year: series.year || '', synopsis: series.synopsis || '' })
+    setEditing(false)
+  }
+
   return (
     <div className="series-view">
-      <div className="series-header">
-        <h1 className="series-title">{series.name}</h1>
-        <span className="series-count">{series.volumes.length} volume{series.volumes.length !== 1 ? 's' : ''}</span>
+      <div className="series-meta-panel">
+        <SeriesCover path={series.coverCbz} />
+        <div className="series-meta-info">
+          <div className="series-meta-header">
+            <h1 className="series-title">{series.name}</h1>
+            {!editing && (
+              <button className="meta-edit-btn" onClick={() => setEditing(true)}>Edit</button>
+            )}
+          </div>
+
+          {editing ? (
+            <div className="meta-edit-form">
+              <div className="meta-row">
+                <label className="meta-label">Author</label>
+                <input
+                  className="meta-input"
+                  value={draft.author}
+                  onChange={e => setDraft(d => ({ ...d, author: e.target.value }))}
+                  placeholder="Unknown"
+                />
+              </div>
+              <div className="meta-row">
+                <label className="meta-label">Year</label>
+                <input
+                  className="meta-input meta-input-short"
+                  value={draft.year}
+                  onChange={e => setDraft(d => ({ ...d, year: e.target.value }))}
+                  placeholder="—"
+                  type="number"
+                />
+              </div>
+              <div className="meta-row meta-row-col">
+                <label className="meta-label">Synopsis</label>
+                <textarea
+                  className="meta-textarea"
+                  value={draft.synopsis}
+                  onChange={e => setDraft(d => ({ ...d, synopsis: e.target.value }))}
+                  placeholder="No synopsis yet..."
+                  rows={4}
+                />
+              </div>
+              <div className="meta-edit-actions">
+                <button className="add-btn" onClick={saveEdit}>Save</button>
+                <button className="add-btn secondary" onClick={cancelEdit}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="meta-fields">
+              <div className="meta-stats-row">
+                <div className="meta-stat">
+                  <span className="meta-label">Author</span>
+                  <span className="meta-value">{series.author || '—'}</span>
+                </div>
+                <div className="meta-stat">
+                  <span className="meta-label">Year</span>
+                  <span className="meta-value">{series.year || '—'}</span>
+                </div>
+                <div className="meta-stat">
+                  <span className="meta-label">Volumes</span>
+                  <span className="meta-value">{series.volumes.length}</span>
+                </div>
+                <div className="meta-stat">
+                  <span className="meta-label">Pages</span>
+                  <span className="meta-value">{totalPages > 0 ? totalPages.toLocaleString() : '—'}</span>
+                </div>
+              </div>
+              {series.synopsis && <p className="meta-synopsis">{series.synopsis}</p>}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="volumes-grid">
-        {series.volumes.map((volume) => (
-          <VolumeCard
-            key={volume.id}
-            volume={volume}
-            progress={progress[volume.path]}
-            onOpen={() => onOpen(volume)}
-          />
-        ))}
+      <div className="volumes-section">
+        <h2 className="section-title">Volumes</h2>
+        <div className="volumes-grid">
+          {series.volumes.map((volume) => (
+            <VolumeCard
+              key={volume.id}
+              volume={{ ...volume, pageCount: volume.pageCount || pageCounts[volume.id] || 0 }}
+              progress={progress[volume.path]}
+              onOpen={() => onOpen(volume)}
+            />
+          ))}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function SeriesCover({ path }) {
+  const [cover, setCover] = useState(null)
+  useEffect(() => {
+    if (path) window.api.getCover(path).then(setCover)
+  }, [path])
+  return (
+    <div className="series-cover-large">
+      {cover ? <img src={cover} alt="" /> : <div className="cover-placeholder">📖</div>}
     </div>
   )
 }

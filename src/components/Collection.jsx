@@ -68,7 +68,7 @@ export default function Collection({ collection, progress, onOpen, onAddSeries, 
           <div className="empty-state">
             <div className="empty-icon">📚</div>
             <p>Your collection is empty</p>
-            <p className="empty-sub">Add a manga series folder or individual .cbz files</p>
+            <p className="empty-sub">Add a manga series folder or individual .cbz / .cbr files</p>
           </div>
         ) : (
           <div className="manga-grid">

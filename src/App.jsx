@@ -49,7 +49,7 @@ export default function App() {
     window.api.onLibraryFileAdded(({ cbzPath, parentDir, libraryPath }) => {
       const volume = {
         id: `vol-${Date.now()}-${Math.random()}`,
-        name: cbzPath.split(/[\\/]/).pop().replace(/\.cbz$/i, ''),
+        name: cbzPath.split(/[\\/]/).pop().replace(/\.(cbz|cbr)$/i, ''),
         path: cbzPath,
         pageCount: 0,
       }
@@ -135,6 +135,10 @@ export default function App() {
     setCollection(c => c.filter(s => s.id !== id))
   }
 
+  function updateSeries(id, updates) {
+    setCollection(c => c.map(s => s.id === id ? { ...s, ...updates } : s))
+  }
+
   // Find series + volume for "continue reading" navigation
   function openReaderFromCollection(cbzPath) {
     for (const series of collection) {
@@ -162,9 +166,10 @@ export default function App() {
 
       {view === 'series' && selectedSeries && (
         <SeriesDetail
-          series={selectedSeries}
+          series={collection.find(s => s.id === selectedSeries.id) || selectedSeries}
           progress={progress}
           onOpen={openReader}
+          onUpdateSeries={updateSeries}
         />
       )}
 
