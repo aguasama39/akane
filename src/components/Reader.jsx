@@ -108,7 +108,7 @@ export default function Reader({ volume, savedPage, onProgress, onClose, isFulls
         ))}
       </div>
 
-      <div className={`reader-ui ${showUI ? 'visible' : ''}`}>
+      <div className="reader-top-zone">
         <div className="reader-top-bar">
           <button className="reader-btn" onClick={onClose}>← Back</button>
           <span className="reader-title">{volume.name}</span>
@@ -125,7 +125,9 @@ export default function Reader({ volume, savedPage, onProgress, onClose, isFulls
             >{isFullscreen ? '⊠ Exit FS' : '⊞ Fullscreen'}</button>
           </div>
         </div>
+      </div>
 
+      <div className={`reader-ui ${showUI ? 'visible' : ''}`}>
         <div className="reader-bottom-bar">
           <button className="nav-btn" onClick={goPrev} disabled={current === 0}>‹ Prev</button>
           <div className="reader-progress-wrap">

@@ -346,11 +346,23 @@ body {
 }
 .reader-ui.visible { opacity: 1; pointer-events: all; cursor: default; }
 
-.reader-top-bar {
+.reader-top-zone {
   position: absolute; top: 0; left: 0; right: 0;
+  height: 60px; z-index: 21; pointer-events: all;
+}
+.reader-top-bar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 16px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.2s, opacity 0.2s;
+  pointer-events: none;
+}
+.reader-top-zone:hover .reader-top-bar {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
 }
 .reader-top-right { display: flex; gap: 8px; }
 
