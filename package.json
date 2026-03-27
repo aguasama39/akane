@@ -7,7 +7,8 @@
     "dev": "concurrently \"vite build --watch\" \"wait-on dist-react/index.html && electron .\"",
     "build": "vite build",
     "start": "vite build && electron .",
-    "dist": "vite build && electron-builder --win --x64"
+    "dist": "vite build && electron-builder --win --x64",
+    "dist:linux": "vite build && electron-builder --linux --x64"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.0",
