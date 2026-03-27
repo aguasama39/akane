@@ -9,6 +9,12 @@ export default function App() {
   const [progress, setProgress] = useState({})
   const [selectedSeries, setSelectedSeries] = useState(null)
   const [selectedVolume, setSelectedVolume] = useState(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  function toggleFullscreen() {
+    window.api.windowFullscreen()
+    setIsFullscreen(v => !v)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -149,7 +155,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TitleBar view={view} onBack={() => setView(view === 'reader' ? 'series' : 'collection')} />
+      <TitleBar view={view} onBack={() => setView(view === 'reader' ? 'series' : 'collection')} isFullscreen={isFullscreen} />
 
       {view === 'collection' && (
         <Collection
@@ -178,16 +184,18 @@ export default function App() {
           volume={selectedVolume}
           savedPage={progress[selectedVolume.path]?.page ?? 0}
           onProgress={updateProgress}
-          onClose={() => setView('series')}
+          onClose={() => { if (isFullscreen) toggleFullscreen(); setView('series') }}
+          isFullscreen={isFullscreen}
+          onFullscreenToggle={toggleFullscreen}
         />
       )}
     </div>
   )
 }
 
-function TitleBar({ view, onBack }) {
+function TitleBar({ view, onBack, isFullscreen }) {
   return (
-    <div className="titlebar">
+    <div className={`titlebar${isFullscreen ? ' titlebar--autohide' : ''}`}>
       <div className="titlebar-left">
         {view !== 'collection' && (
           <button className="back-btn" onClick={onBack}>← Back</button>
@@ -197,6 +205,7 @@ function TitleBar({ view, onBack }) {
       <div className="titlebar-controls">
         <button className="tb-btn" onClick={() => window.api.windowMinimize()}>−</button>
         <button className="tb-btn" onClick={() => window.api.windowMaximize()}>□</button>
+        <button className="tb-btn" onClick={() => window.api.windowFullscreen()} title="Fullscreen">⛶</button>
         <button className="tb-btn close" onClick={() => window.api.windowClose()}>✕</button>
       </div>
     </div>

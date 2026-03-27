@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld('api', {
   windowMaximize: () => ipcRenderer.send('window-maximize'),
   windowClose: () => ipcRenderer.send('window-close'),
   windowFullscreen: () => ipcRenderer.send('window-fullscreen'),
+  onFullscreenChange: (cb) => ipcRenderer.on('fullscreen-change', (_e, isFs) => cb(isFs)),
 });

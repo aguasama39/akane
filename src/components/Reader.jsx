@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-export default function Reader({ volume, savedPage, onProgress, onClose }) {
+export default function Reader({ volume, savedPage, onProgress, onClose, isFullscreen, onFullscreenToggle }) {
   const [pages, setPages] = useState([])
   const [current, setCurrent] = useState(0)
   const [doublePage, setDoublePage] = useState(false)
-  const [fullscreen, setFullscreen] = useState(false)
   const [showUI, setShowUI] = useState(true)
   const [loading, setLoading] = useState(true)
   const uiTimer = useRef(null)
@@ -69,7 +68,7 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrev()
       if (e.key === 'Escape') onClose()
       if (e.key === 'd') setDoublePage(v => !v)
-      if (e.key === 'f') { window.api.windowFullscreen(); setFullscreen(v => !v) }
+      if (e.key === 'f') onFullscreenToggle()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -121,9 +120,9 @@ export default function Reader({ volume, savedPage, onProgress, onClose }) {
             >⊟ Double</button>
             <button
               className="reader-btn"
-              onClick={() => { window.api.windowFullscreen(); setFullscreen(v => !v) }}
+              onClick={onFullscreenToggle}
               title="Toggle fullscreen (F)"
-            >{fullscreen ? '⊠ Exit FS' : '⊞ Fullscreen'}</button>
+            >{isFullscreen ? '⊠ Exit FS' : '⊞ Fullscreen'}</button>
           </div>
         </div>
 

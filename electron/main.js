@@ -145,6 +145,9 @@ function createWindow() {
     },
   });
 
+  mainWindow.on('enter-full-screen', () => mainWindow.webContents.send('fullscreen-change', true));
+  mainWindow.on('leave-full-screen', () => mainWindow.webContents.send('fullscreen-change', false));
+
   const indexPath = path.join(__dirname, '..', 'dist-react', 'index.html');
   mainWindow.loadFile(indexPath);
 }
