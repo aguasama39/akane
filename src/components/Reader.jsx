@@ -4,7 +4,6 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
   const [pages, setPages] = useState([])
   const [current, setCurrent] = useState(0)
   const [doublePage, setDoublePage] = useState(false)
-  const [rtl, setRtl] = useState(false)
   const [showUI, setShowUI] = useState(true)
   const [loading, setLoading] = useState(true)
   const [zoomed, setZoomed] = useState(false)
@@ -76,18 +75,17 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
       if (e.key === '?') { setShowShortcuts(v => !v); return }
       if (showShortcuts) { if (e.key === 'Escape') setShowShortcuts(false); return }
       if (e.key === 'Escape') { if (zoomed) { setZoomed(false); return } onClose(); return }
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') rtl ? goPrev() : goNext()
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNext()
       if (e.key === ' ') { e.preventDefault(); goNext() }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') rtl ? goNext() : goPrev()
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrev()
       if (e.key === 'd') setDoublePage(v => !v)
       if (e.key === 'f') onFullscreenToggle()
-      if (e.key === 'r') setRtl(v => !v)
       if (e.key === 'z') setZoomed(v => !v)
       if (e.key === 'b') onToggleBookmark(current)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [goNext, goPrev, onClose, rtl, zoomed, showShortcuts, current, onToggleBookmark, onFullscreenToggle])
+  }, [goNext, goPrev, onClose, zoomed, showShortcuts, current, onToggleBookmark, onFullscreenToggle])
 
   function pageUrl(index) {
     if (index >= totalPages) return null
@@ -107,11 +105,7 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
     showUITemporarily()
     const mid = e.currentTarget.getBoundingClientRect().width / 2
     const isLeft = e.clientX < mid
-    if (rtl) {
-      isLeft ? goNext() : goPrev()
-    } else {
-      isLeft ? goPrev() : goNext()
-    }
+    isLeft ? goPrev() : goNext()
   }
 
   const imageFilter = `brightness(${brightness}%) contrast(${contrast}%)`
@@ -124,7 +118,7 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
       onClick={handleReaderClick}
     >
       <div
-        className={`reader-pages ${doublePage ? 'double' : 'single'}${rtl ? ' rtl' : ''}`}
+        className={`reader-pages ${doublePage ? 'double' : 'single'}`}
         style={{ filter: imageFilter }}
       >
         {getDisplayIndices().map(i => (
@@ -157,11 +151,6 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
             )}
           </div>
           <div className="reader-top-right">
-            <button
-              className={`reader-btn ${rtl ? 'active' : ''}`}
-              onClick={e => { e.stopPropagation(); setRtl(v => !v) }}
-              title="Toggle reading direction (R)"
-            >{rtl ? 'RTL' : 'LTR'}</button>
             <button
               className={`reader-btn ${doublePage ? 'active' : ''}`}
               onClick={e => { e.stopPropagation(); setDoublePage(v => !v) }}
@@ -212,9 +201,9 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
         <div className="reader-bottom-bar">
           <button
             className="nav-btn"
-            onClick={e => { e.stopPropagation(); rtl ? goNext() : goPrev() }}
-            disabled={rtl ? current >= totalPages - 1 : current === 0}
-          >{rtl ? 'Next ›' : '‹ Prev'}</button>
+            onClick={e => { e.stopPropagation(); goPrev() }}
+            disabled={current === 0}
+          >‹ Prev</button>
           <div className="reader-progress-wrap">
             <input
               type="range"
@@ -241,9 +230,9 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
           >{isBookmarked ? '★' : '☆'}</button>
           <button
             className="nav-btn"
-            onClick={e => { e.stopPropagation(); rtl ? goPrev() : goNext() }}
-            disabled={rtl ? current === 0 : current >= totalPages - 1}
-          >{rtl ? '‹ Prev' : 'Next ›'}</button>
+            onClick={e => { e.stopPropagation(); goNext() }}
+            disabled={current >= totalPages - 1}
+          >Next ›</button>
         </div>
       </div>
 
@@ -257,7 +246,6 @@ export default function Reader({ volume, seriesVolumes, savedPage, onProgress, o
               <kbd>Space</kbd><span>Next page</span>
               <kbd>D</kbd><span>Toggle double page</span>
               <kbd>F</kbd><span>Toggle fullscreen</span>
-              <kbd>R</kbd><span>Toggle RTL / LTR direction</span>
               <kbd>Z</kbd><span>Toggle zoom</span>
               <kbd>B</kbd><span>Bookmark current page</span>
               <kbd>Esc</kbd><span>Exit zoom / close reader</span>
