@@ -8,6 +8,13 @@ export default function SeriesDetail({ series, progress, onOpen, onUpdateSeries 
     synopsis: series.synopsis || '',
   })
   const [pageCounts, setPageCounts] = useState({})
+  const [covers, setCovers] = useState({})
+
+  // Batch-fetch all volume covers at once
+  useEffect(() => {
+    const paths = series.volumes.map(v => v.path)
+    window.api.getCoversBatch(paths).then(setCovers)
+  }, [series.id])
 
   // Fetch page counts for volumes that don't have them yet
   useEffect(() => {
@@ -122,6 +129,7 @@ export default function SeriesDetail({ series, progress, onOpen, onUpdateSeries 
             <VolumeCard
               key={volume.id}
               volume={{ ...volume, pageCount: volume.pageCount || pageCounts[volume.id] || 0 }}
+              cover={covers[volume.path] ?? null}
               progress={progress[volume.path]}
               onOpen={() => onOpen(volume)}
             />
@@ -144,13 +152,7 @@ function SeriesCover({ path }) {
   )
 }
 
-function VolumeCard({ volume, progress, onOpen }) {
-  const [cover, setCover] = useState(null)
-
-  useEffect(() => {
-    window.api.getCover(volume.path).then(setCover)
-  }, [volume.path])
-
+function VolumeCard({ volume, cover, progress, onOpen }) {
   const pct = progress?.total > 0
     ? Math.round((progress.page / Math.max(progress.total - 1, 1)) * 100)
     : null

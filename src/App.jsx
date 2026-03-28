@@ -21,27 +21,10 @@ export default function App() {
       window.api.loadCollection(),
       window.api.loadProgress(),
     ]).then(([saved, prog]) => {
-      setCollection(saved)
       setProgress(prog)
-      // Auto-refresh library folders for new content
-      const existingVolumePaths = saved.flatMap(s => s.volumes.map(v => v.path))
-      const existingFolderPaths = saved.map(s => s.folderPath).filter(Boolean)
-      window.api.refreshLibrary(existingVolumePaths, existingFolderPaths).then(({ newSeries, newVolumes }) => {
-        if (newSeries.length === 0 && newVolumes.length === 0) return
-        setCollection(c => {
-          let updated = [...c]
-          // Add brand new series
-          if (newSeries.length > 0) updated = [...updated, ...newSeries]
-          // Add new volumes to existing series
-          for (const { seriesFolderPath, volume } of newVolumes) {
-            updated = updated.map(s =>
-              s.folderPath === seriesFolderPath
-                ? { ...s, volumes: [...s.volumes, volume] }
-                : s
-            )
-          }
-          return updated
-        })
+      window.api.syncCollection(saved).then(synced => {
+        setCollection(synced)
+        window.api.saveCollection(synced)
       })
     })
   }, [])

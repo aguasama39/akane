@@ -128,6 +128,15 @@ app.whenReady().then(() => {
   createWindow();
   // Restore watchers for all saved library folders
   loadLibraryPaths().filter(p => fs.existsSync(p)).forEach(watchLibraryFolder);
+  // Restore watchers for individual series folders (added via "Add Series")
+  try {
+    const libraryPaths = loadLibraryPaths();
+    const collection = JSON.parse(fs.readFileSync(collectionFile(), 'utf8'));
+    collection
+      .filter(s => s.folderPath && fs.existsSync(s.folderPath))
+      .filter(s => !libraryPaths.some(lp => s.folderPath.startsWith(lp + path.sep)))
+      .forEach(s => watchLibraryFolder(s.folderPath));
+  } catch (_) {}
 });
 
 function createWindow() {
@@ -208,6 +217,9 @@ ipcMain.handle('add-series', async () => {
     const pages = sortImages([...zip.keys()]);
     volumes[0].pageCount = pages.length;
   } catch (_) {}
+
+  // Watch for new volumes added to this series folder
+  watchLibraryFolder(folderPath);
 
   return {
     id: `series-${Date.now()}`,
@@ -293,34 +305,64 @@ ipcMain.handle('scan-library', async () => {
   return scanLibraryFolder(libraryPath);
 });
 
-// ── Refresh all saved library folders ─────────────────────────────────────
-// Returns { newSeries, newVolumes } where newVolumes are additions to existing series
-ipcMain.handle('refresh-library', async (_e, existingVolumePaths, existingFolderPaths) => {
-  const knownVolumes = new Set(existingVolumePaths);
-  const knownFolders = new Set(existingFolderPaths);
+// ── Full startup sync — reconciles collection against disk ─────────────────
+// Takes the saved collection, returns a fully synced version:
+//   - series with folderPath: rescanned from disk (adds new files, removes deleted)
+//   - standalone CBZ series: removed if file no longer exists
+//   - library paths: new series/files discovered since last run are appended
+ipcMain.handle('sync-collection', async (_e, collection) => {
+  const synced = [];
+
+  for (const series of collection) {
+    if (series.folderPath) {
+      if (!fs.existsSync(series.folderPath)) continue; // folder deleted — drop series
+
+      // Rescan folder to get authoritative file list
+      let diskFiles;
+      try {
+        diskFiles = fs.readdirSync(series.folderPath, { withFileTypes: true })
+          .filter(e => e.isFile() && isArchive(e.name))
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+          .map(e => path.join(series.folderPath, e.name));
+      } catch (_) { continue; }
+
+      if (diskFiles.length === 0) continue; // folder now empty — drop series
+
+      const existingByPath = new Map(series.volumes.map(v => [v.path, v]));
+      const volumes = diskFiles.map(filePath =>
+        existingByPath.get(filePath) ?? {
+          id: `vol-${Date.now()}-${Math.random()}`,
+          name: stripArchiveExt(filePath),
+          path: filePath,
+          pageCount: 0,
+        }
+      );
+      synced.push({ ...series, volumes });
+    } else {
+      // Standalone CBZ — keep only if file still exists
+      const volumes = series.volumes.filter(v => fs.existsSync(v.path));
+      if (volumes.length > 0) synced.push({ ...series, volumes });
+    }
+  }
+
+  // Discover new series/files in library paths not already in the synced collection
   const libraryPaths = loadLibraryPaths().filter(p => fs.existsSync(p));
-  const newSeries = [];
-  const newVolumes = []; // { seriesFolderPath, volume }
+  const knownFolders = new Set(synced.filter(s => s.folderPath).map(s => s.folderPath));
+  const knownVolumes = new Set(synced.flatMap(s => s.volumes.map(v => v.path)));
 
   for (const libPath of libraryPaths) {
-    const items = await scanLibraryFolder(libPath);
+    let items;
+    try { items = await scanLibraryFolder(libPath); } catch (_) { continue; }
     for (const item of items) {
-      if (!item.folderPath || !knownFolders.has(item.folderPath)) {
-        // Brand new series — only add if none of its volumes are known
-        const allKnown = item.volumes.every(v => knownVolumes.has(v.path));
-        if (!allKnown) newSeries.push(item);
+      if (item.folderPath) {
+        if (!knownFolders.has(item.folderPath)) synced.push(item); // new series subfolder
       } else {
-        // Existing series — find and return only new volumes
-        for (const vol of item.volumes) {
-          if (!knownVolumes.has(vol.path)) {
-            newVolumes.push({ seriesFolderPath: item.folderPath, volume: vol });
-          }
-        }
+        if (!knownVolumes.has(item.coverCbz)) synced.push(item); // new standalone CBZ
       }
     }
   }
 
-  return { newSeries, newVolumes };
+  return synced;
 });
 
 // ── Add standalone .cbz files ──────────────────────────────────────────────
@@ -410,6 +452,30 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
   } catch (_) {
     return null;
   }
+});
+
+// ── Batch cover fetch ──────────────────────────────────────────────────────
+ipcMain.handle('get-covers-batch', async (_e, cbzPaths) => {
+  const results = await Promise.all(cbzPaths.map(async (cbzPath) => {
+    try {
+      const cachePath = coverCachePath(cbzPath);
+      if (fs.existsSync(cachePath)) {
+        return [cbzPath, `file://${cachePath.replace(/\\/g, '/')}`];
+      }
+      const zip = await getArchive(cbzPath);
+      const pages = sortImages([...zip.keys()]);
+      if (pages.length === 0) return [cbzPath, null];
+      const entry = zip.get(pages[0]);
+      const buffer = Buffer.from(await entry.getData(new Uint8ArrayWriter()));
+      const img = nativeImage.createFromBuffer(buffer);
+      const resized = img.resize({ width: 200 });
+      fs.writeFileSync(cachePath, resized.toJPEG(85));
+      return [cbzPath, `file://${cachePath.replace(/\\/g, '/')}`];
+    } catch (_) {
+      return [cbzPath, null];
+    }
+  }));
+  return Object.fromEntries(results);
 });
 
 // ── Reading progress ───────────────────────────────────────────────────────
