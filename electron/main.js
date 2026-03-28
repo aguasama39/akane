@@ -496,6 +496,28 @@ ipcMain.handle('save-progress', (_e, cbzPath, page, total) => {
   } catch (_) {}
 });
 
+// ── Metadata (tags, status, rating, notes, publisher, seriesStatus) ────────
+const metadataFile = () => path.join(app.getPath('userData'), 'metadata.json');
+
+ipcMain.handle('load-metadata', () => {
+  try { return JSON.parse(fs.readFileSync(metadataFile(), 'utf8')); } catch (_) { return {}; }
+});
+
+ipcMain.handle('save-metadata', (_e, metadata) => {
+  try { fs.writeFileSync(metadataFile(), JSON.stringify(metadata, null, 2)); } catch (_) {}
+});
+
+// ── Bookmarks (page bookmarks per volume) ─────────────────────────────────
+const bookmarksFile = () => path.join(app.getPath('userData'), 'bookmarks.json');
+
+ipcMain.handle('load-bookmarks', () => {
+  try { return JSON.parse(fs.readFileSync(bookmarksFile(), 'utf8')); } catch (_) { return {}; }
+});
+
+ipcMain.handle('save-bookmarks', (_e, bookmarks) => {
+  try { fs.writeFileSync(bookmarksFile(), JSON.stringify(bookmarks)); } catch (_) {}
+});
+
 // ── Window controls ────────────────────────────────────────────────────────
 ipcMain.on('window-minimize', () => mainWindow.minimize());
 ipcMain.on('window-maximize', () => mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize());
