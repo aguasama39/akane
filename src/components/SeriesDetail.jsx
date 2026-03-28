@@ -78,11 +78,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
             <h1 className="series-title">{series.name}</h1>
             <div className="series-header-actions">
               {!editing && (
-                <>
-                  <button className="meta-action-btn" onClick={onMarkAllRead} title="Mark all volumes as read">✓ All Read</button>
-                  <button className="meta-action-btn" onClick={onMarkAllUnread} title="Reset all volume progress">↺ Reset All</button>
-                  <button className="meta-edit-btn" onClick={() => setEditing(true)}>Edit</button>
-                </>
+                <button className="meta-edit-btn" onClick={() => setEditing(true)}>Edit</button>
               )}
             </div>
           </div>
@@ -258,7 +254,6 @@ function VolumeCard({ volume, cover, progress, onOpen }) {
       <div className="volume-info">
         <div className="volume-name">
           {volume.name}
-          {finished && <span className="finished-badge">✓</span>}
         </div>
         {pct !== null ? (
           <div className="volume-pct" style={{ color: finished ? 'var(--accent)' : 'var(--text-dim)' }}>
