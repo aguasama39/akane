@@ -63,7 +63,7 @@ export default function App() {
         const existingSeries = c.find(s => s.folderPath === parentDir)
         if (existingSeries) {
           return c.map(s => s.folderPath === parentDir
-            ? { ...s, volumes: [...s.volumes, volume] }
+            ? { ...s, volumes: [...s.volumes, volume].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })) }
             : s
           )
         }
