@@ -117,6 +117,27 @@ export default function App() {
     })
   }
 
+  function markAllUnread(series) {
+    series.volumes.forEach(vol => {
+      updateProgress(vol.path, 0, 0)
+    })
+  }
+
+  useEffect(() => {
+    if (collection.length === 0) return
+    collection.forEach(series => {
+      const vols = series.volumes.filter(v => v.pageCount > 0)
+      if (vols.length === 0) return
+      const allDone = vols.every(v => {
+        const p = progress[v.path]
+        return p?.total > 0 && p.page >= p.total - 1
+      })
+      if (allDone && metadata[series.id]?.status !== 'completed') {
+        updateMetadata(series.id, { status: 'completed' })
+      }
+    })
+  }, [progress, collection])
+
   function openSeries(series) {
     setSelectedSeries(series)
     setView('series')
@@ -210,6 +231,7 @@ export default function App() {
           onUpdateSeries={updateSeries}
           onUpdateMeta={updates => updateMetadata(currentSeries.id, updates)}
           onMarkAllRead={() => markAllRead(currentSeries)}
+          onMarkAllUnread={() => markAllUnread(currentSeries)}
         />
       )}
 

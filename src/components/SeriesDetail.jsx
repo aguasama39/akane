@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onUpdateSeries, onUpdateMeta, onMarkAllRead }) {
+export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onUpdateSeries, onUpdateMeta, onMarkAllRead, onMarkAllUnread }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({
     author: series.author || '',
@@ -80,6 +80,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
               {!editing && (
                 <>
                   <button className="meta-action-btn" onClick={onMarkAllRead} title="Mark all volumes as read">✓ All Read</button>
+                  <button className="meta-action-btn" onClick={onMarkAllUnread} title="Reset all volume progress">↺ Reset All</button>
                   <button className="meta-edit-btn" onClick={() => setEditing(true)}>Edit</button>
                 </>
               )}
@@ -250,13 +251,15 @@ function VolumeCard({ volume, cover, progress, onOpen }) {
     <div className="volume-card" onClick={onOpen}>
       <div className="volume-cover">
         {cover ? <img src={cover} alt={volume.name} /> : <div className="cover-placeholder">📖</div>}
-        {finished && <div className="finished-badge">✓</div>}
         {pct !== null && !finished && (
           <div className="cover-progress-bar" style={{ width: `${pct}%` }} />
         )}
       </div>
       <div className="volume-info">
-        <div className="volume-name">{volume.name}</div>
+        <div className="volume-name">
+          {volume.name}
+          {finished && <span className="finished-badge">✓</span>}
+        </div>
         {pct !== null ? (
           <div className="volume-pct" style={{ color: finished ? 'var(--accent)' : 'var(--text-dim)' }}>
             {finished ? 'Finished' : `${pct}% · ${progress.total - progress.page} left`}
