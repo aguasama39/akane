@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 
-export default function Collection({ collection, progress, metadata, onOpen, onAddSeries, onAddCbz, onScanLibrary, onRemove, onContinue, onOpenStats, onSetCover }) {
+export default function Collection({ collection, progress, metadata, onOpen, onAddSeries, onAddCbz, onScanLibrary, onRemove, onContinue, onOpenStats }) {
   const [search, setSearch] = useState('')
   const [contextMenu, setContextMenu] = useState(null)
   const [sort, setSort] = useState('added')
@@ -168,9 +168,6 @@ export default function Collection({ collection, progress, metadata, onOpen, onA
 
       {contextMenu && (
         <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-          <button onClick={() => { onSetCover(contextMenu.id); setContextMenu(null) }}>
-            Set cover image
-          </button>
           <button onClick={() => { onRemove(contextMenu.id); setContextMenu(null) }}>
             Remove from collection
           </button>
@@ -194,9 +191,8 @@ function MangaCard({ series, progress, meta, onOpen, onContextMenu }) {
   const [cover, setCover] = useState(null)
 
   useEffect(() => {
-    if (series.customCoverUrl) { setCover(series.customCoverUrl); return }
     if (series.coverCbz) window.api.getCover(series.coverCbz).then(setCover)
-  }, [series.coverCbz, series.customCoverUrl])
+  }, [series.coverCbz])
 
   const seriesPct = getSeriesPct(series, progress)
 
@@ -219,9 +215,8 @@ function MangaListRow({ series, progress, meta, onOpen, onContextMenu }) {
   const [cover, setCover] = useState(null)
 
   useEffect(() => {
-    if (series.customCoverUrl) { setCover(series.customCoverUrl); return }
     if (series.coverCbz) window.api.getCover(series.coverCbz).then(setCover)
-  }, [series.coverCbz, series.customCoverUrl])
+  }, [series.coverCbz])
 
   const seriesPct = getSeriesPct(series, progress)
   const STATUS_LABELS = { reading: 'Reading', 'plan-to-read': 'Plan to Read', completed: 'Completed' }

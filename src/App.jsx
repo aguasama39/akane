@@ -181,13 +181,7 @@ export default function App() {
     setCollection(c => c.map(s => s.id === id ? { ...s, ...updates } : s))
   }
 
-  function handleSetCover(id) {
-    window.api.setCustomCover(id).then(url => {
-      if (url) updateSeries(id, { customCoverUrl: url })
-    })
-  }
-
-  function openReaderFromCollection(cbzPath) {
+function openReaderFromCollection(cbzPath) {
     for (const series of collection) {
       const vol = series.volumes.find(v => v.path === cbzPath)
       if (vol) { setSelectedSeries(series); openReader(vol); return }
@@ -221,7 +215,6 @@ export default function App() {
           onRemove={removeSeries}
           onContinue={openReaderFromCollection}
           onOpenStats={() => setView('stats')}
-          onSetCover={handleSetCover}
         />
       )}
 

@@ -455,8 +455,8 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
   }
 });
 
-// ── Set custom cover image ─────────────────────────────────────────────────
-ipcMain.handle('set-custom-cover', async (_e, seriesId) => {
+// ── Set custom volume cover ────────────────────────────────────────────────
+ipcMain.handle('set-volume-cover', async (_e, volumePath) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     title: 'Select Cover Image',
@@ -464,9 +464,9 @@ ipcMain.handle('set-custom-cover', async (_e, seriesId) => {
   });
   if (result.canceled || !result.filePaths.length) return null;
 
-  const imgPath = result.filePaths[0];
-  const destPath = path.join(getCoverCacheDir(), `custom-${seriesId}.jpg`);
-  const img = nativeImage.createFromPath(imgPath);
+  const hash = crypto.createHash('md5').update('custom-vol-' + volumePath).digest('hex');
+  const destPath = path.join(getCoverCacheDir(), `${hash}.jpg`);
+  const img = nativeImage.createFromPath(result.filePaths[0]);
   const resized = img.resize({ width: 200 });
   fs.writeFileSync(destPath, resized.toJPEG(85));
   return `file://${destPath.replace(/\\/g, '/')}`;

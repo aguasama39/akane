@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onUpdateSeries, onUpdateMeta, onMarkAllRead, onMarkAllUnread }) {
   const [editing, setEditing] = useState(false)
+  const [volContextMenu, setVolContextMenu] = useState(null)
   const [draft, setDraft] = useState({
     author: series.author || '',
     year: series.year || '',
@@ -28,8 +29,18 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
   }, [series.id])
 
   useEffect(() => {
+    const close = () => setVolContextMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [])
+
+  useEffect(() => {
     const paths = series.volumes.map(v => v.path)
-    window.api.getCoversBatch(paths).then(setCovers)
+    window.api.getCoversBatch(paths).then(fetched => {
+      const merged = { ...fetched }
+      Object.entries(series.customVolCovers || {}).forEach(([p, url]) => { merged[p] = url })
+      setCovers(merged)
+    })
   }, [series.id])
 
   useEffect(() => {
@@ -199,10 +210,30 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
               cover={covers[volume.path] ?? null}
               progress={progress[volume.path]}
               onOpen={() => onOpen(volume)}
+              onContextMenu={e => { e.preventDefault(); setVolContextMenu({ x: e.clientX, y: e.clientY, path: volume.path }) }}
             />
           ))}
         </div>
       </div>
+
+      {volContextMenu && (
+        <div className="context-menu" style={{ top: volContextMenu.y, left: volContextMenu.x }}>
+          <button onClick={() => {
+            window.api.setVolumeCover(volContextMenu.path).then(url => {
+              if (!url) return
+              const customVolCovers = { ...(series.customVolCovers || {}), [volContextMenu.path]: url }
+              onUpdateSeries(series.id, { customVolCovers })
+              setCovers(c => ({ ...c, [volContextMenu.path]: url }))
+            })
+            setVolContextMenu(null)
+          }}>
+            Set custom cover
+          </button>
+          <button onClick={() => { onUpdateSeries(series.id, { coverCbz: volContextMenu.path }); setVolContextMenu(null) }}>
+            Set as series cover
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -237,14 +268,14 @@ function SeriesCover({ path }) {
   )
 }
 
-function VolumeCard({ volume, cover, progress, onOpen }) {
+function VolumeCard({ volume, cover, progress, onOpen, onContextMenu }) {
   const pct = progress?.total > 0
     ? Math.round((progress.page / Math.max(progress.total - 1, 1)) * 100)
     : null
   const finished = pct >= 100
 
   return (
-    <div className="volume-card" onClick={onOpen}>
+    <div className="volume-card" onClick={onOpen} onContextMenu={onContextMenu}>
       <div className="volume-cover">
         {cover ? <img src={cover} alt={volume.name} /> : <div className="cover-placeholder">📖</div>}
         {pct !== null && !finished && (
