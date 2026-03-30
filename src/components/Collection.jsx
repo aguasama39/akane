@@ -191,8 +191,9 @@ function MangaCard({ series, progress, meta, onOpen, onContextMenu }) {
   const [cover, setCover] = useState(null)
 
   useEffect(() => {
+    if (series.customCoverUrl) { setCover(series.customCoverUrl); return }
     if (series.coverCbz) window.api.getCover(series.coverCbz).then(setCover)
-  }, [series.coverCbz])
+  }, [series.coverCbz, series.customCoverUrl])
 
   const seriesPct = getSeriesPct(series, progress)
 
@@ -215,8 +216,9 @@ function MangaListRow({ series, progress, meta, onOpen, onContextMenu }) {
   const [cover, setCover] = useState(null)
 
   useEffect(() => {
+    if (series.customCoverUrl) { setCover(series.customCoverUrl); return }
     if (series.coverCbz) window.api.getCover(series.coverCbz).then(setCover)
-  }, [series.coverCbz])
+  }, [series.coverCbz, series.customCoverUrl])
 
   const seriesPct = getSeriesPct(series, progress)
   const STATUS_LABELS = { reading: 'Reading', 'plan-to-read': 'Plan to Read', completed: 'Completed' }

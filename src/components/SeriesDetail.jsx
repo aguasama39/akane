@@ -83,7 +83,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
   return (
     <div className="series-view">
       <div className="series-meta-panel">
-        <SeriesCover path={series.coverCbz} />
+        <SeriesCover path={series.coverCbz} customCoverUrl={series.customCoverUrl} />
         <div className="series-meta-info">
           <div className="series-meta-header">
             <h1 className="series-title">{series.name}</h1>
@@ -222,13 +222,30 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
             window.api.setVolumeCover(volContextMenu.path).then(url => {
               if (!url) return
               const customVolCovers = { ...(series.customVolCovers || {}), [volContextMenu.path]: url }
-              onUpdateSeries(series.id, { customVolCovers })
+              onUpdateSeries(series.id, { customVolCovers, coverCbz: volContextMenu.path, customCoverUrl: url })
               setCovers(c => ({ ...c, [volContextMenu.path]: url }))
             })
             setVolContextMenu(null)
           }}>
             Set custom cover
           </button>
+          {series.customVolCovers?.[volContextMenu.path] && (
+            <button onClick={() => {
+              const customVolCovers = { ...(series.customVolCovers || {}) }
+              delete customVolCovers[volContextMenu.path]
+              const updates = { customVolCovers }
+              if (series.customCoverUrl === series.customVolCovers[volContextMenu.path]) {
+                updates.customCoverUrl = null
+              }
+              onUpdateSeries(series.id, updates)
+              window.api.getCover(volContextMenu.path).then(url => {
+                setCovers(c => ({ ...c, [volContextMenu.path]: url }))
+              })
+              setVolContextMenu(null)
+            }}>
+              Reset to original cover
+            </button>
+          )}
           <button onClick={() => { onUpdateSeries(series.id, { coverCbz: volContextMenu.path }); setVolContextMenu(null) }}>
             Set as series cover
           </button>
@@ -256,11 +273,12 @@ function StarRating({ value, onChange }) {
   )
 }
 
-function SeriesCover({ path }) {
+function SeriesCover({ path, customCoverUrl }) {
   const [cover, setCover] = useState(null)
   useEffect(() => {
+    if (customCoverUrl) { setCover(customCoverUrl); return }
     if (path) window.api.getCover(path).then(setCover)
-  }, [path])
+  }, [path, customCoverUrl])
   return (
     <div className="series-cover-large">
       {cover ? <img src={cover} alt="" /> : <div className="cover-placeholder">📖</div>}
