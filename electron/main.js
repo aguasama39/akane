@@ -337,7 +337,8 @@ ipcMain.handle('sync-collection', async (_e, collection) => {
           pageCount: 0,
         }
       );
-      synced.push({ ...series, volumes });
+      const coverCbz = series.customCoverUrl ? series.coverCbz : volumes[0].path;
+      synced.push({ ...series, volumes, coverCbz });
     } else {
       // Standalone CBZ — keep only if file still exists
       const volumes = series.volumes.filter(v => fs.existsSync(v.path));
