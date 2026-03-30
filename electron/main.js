@@ -454,6 +454,23 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
   }
 });
 
+// ── Set custom cover image ─────────────────────────────────────────────────
+ipcMain.handle('set-custom-cover', async (_e, seriesId) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    title: 'Select Cover Image',
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }],
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+
+  const imgPath = result.filePaths[0];
+  const destPath = path.join(getCoverCacheDir(), `custom-${seriesId}.jpg`);
+  const img = nativeImage.createFromPath(imgPath);
+  const resized = img.resize({ width: 200 });
+  fs.writeFileSync(destPath, resized.toJPEG(85));
+  return `file://${destPath.replace(/\\/g, '/')}`;
+});
+
 // ── Batch cover fetch ──────────────────────────────────────────────────────
 ipcMain.handle('get-covers-batch', async (_e, cbzPaths) => {
   const results = await Promise.all(cbzPaths.map(async (cbzPath) => {

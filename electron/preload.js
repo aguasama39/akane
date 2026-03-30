@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   onLibraryFileAdded: (cb) => ipcRenderer.on('library-file-added', (_e, data) => cb(data)),
   openVolume: (cbzPath) => ipcRenderer.invoke('open-volume', cbzPath),
   getCover: (cbzPath) => ipcRenderer.invoke('get-cover', cbzPath),
+  setCustomCover: (seriesId) => ipcRenderer.invoke('set-custom-cover', seriesId),
   getCoversBatch: (paths) => ipcRenderer.invoke('get-covers-batch', paths),
   loadProgress: () => ipcRenderer.invoke('load-progress'),
   saveProgress: (cbzPath, page, total) => ipcRenderer.invoke('save-progress', cbzPath, page, total),
