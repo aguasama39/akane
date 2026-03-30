@@ -455,7 +455,7 @@ ipcMain.handle('get-cover', async (_e, cbzPath) => {
   }
 });
 
-// ── Set custom volume cover ────────────────────────────────────────────────
+// ── Set custom cover (volume or series) ───────────────────────────────────
 ipcMain.handle('set-volume-cover', async (_e, volumePath) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],

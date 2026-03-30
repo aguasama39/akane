@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 
-export default function Collection({ collection, progress, metadata, onOpen, onAddSeries, onAddCbz, onScanLibrary, onRemove, onContinue, onOpenStats }) {
+export default function Collection({ collection, progress, metadata, onOpen, onAddSeries, onAddCbz, onScanLibrary, onRemove, onContinue, onOpenStats, onSetSeriesCover }) {
   const [search, setSearch] = useState('')
   const [contextMenu, setContextMenu] = useState(null)
   const [sort, setSort] = useState('added')
@@ -168,6 +168,9 @@ export default function Collection({ collection, progress, metadata, onOpen, onA
 
       {contextMenu && (
         <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+          <button onClick={() => { onSetSeriesCover(contextMenu.id); setContextMenu(null) }}>
+            Set series cover
+          </button>
           <button onClick={() => { onRemove(contextMenu.id); setContextMenu(null) }}>
             Remove from collection
           </button>

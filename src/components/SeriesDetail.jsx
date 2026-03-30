@@ -222,7 +222,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
             window.api.setVolumeCover(volContextMenu.path).then(url => {
               if (!url) return
               const customVolCovers = { ...(series.customVolCovers || {}), [volContextMenu.path]: url }
-              onUpdateSeries(series.id, { customVolCovers, coverCbz: volContextMenu.path, customCoverUrl: url })
+              onUpdateSeries(series.id, { customVolCovers })
               setCovers(c => ({ ...c, [volContextMenu.path]: url }))
             })
             setVolContextMenu(null)
@@ -233,11 +233,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
             <button onClick={() => {
               const customVolCovers = { ...(series.customVolCovers || {}) }
               delete customVolCovers[volContextMenu.path]
-              const updates = { customVolCovers }
-              if (series.customCoverUrl === series.customVolCovers[volContextMenu.path]) {
-                updates.customCoverUrl = null
-              }
-              onUpdateSeries(series.id, updates)
+              onUpdateSeries(series.id, { customVolCovers })
               window.api.getCover(volContextMenu.path).then(url => {
                 setCovers(c => ({ ...c, [volContextMenu.path]: url }))
               })
@@ -246,9 +242,6 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
               Reset to original cover
             </button>
           )}
-          <button onClick={() => { onUpdateSeries(series.id, { coverCbz: volContextMenu.path }); setVolContextMenu(null) }}>
-            Set as series cover
-          </button>
         </div>
       )}
     </div>

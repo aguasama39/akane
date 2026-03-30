@@ -177,6 +177,12 @@ export default function App() {
     setCollection(c => c.filter(s => s.id !== id))
   }
 
+  function handleSetSeriesCover(id) {
+    window.api.setVolumeCover(id).then(url => {
+      if (url) updateSeries(id, { customCoverUrl: url })
+    })
+  }
+
   function updateSeries(id, updates) {
     setCollection(c => c.map(s => s.id === id ? { ...s, ...updates } : s))
   }
@@ -215,6 +221,7 @@ function openReaderFromCollection(cbzPath) {
           onRemove={removeSeries}
           onContinue={openReaderFromCollection}
           onOpenStats={() => setView('stats')}
+          onSetSeriesCover={handleSetSeriesCover}
         />
       )}
 
