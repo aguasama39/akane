@@ -219,6 +219,12 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
       {volContextMenu && (
         <div className="context-menu" style={{ top: volContextMenu.y, left: volContextMenu.x }}>
           <button onClick={() => {
+            onUpdateSeries(series.id, { coverCbz: volContextMenu.path })
+            setVolContextMenu(null)
+          }}>
+            Set as series cover
+          </button>
+          <button onClick={() => {
             window.api.setVolumeCover(volContextMenu.path).then(url => {
               if (!url) return
               const customVolCovers = { ...(series.customVolCovers || {}), [volContextMenu.path]: url }
