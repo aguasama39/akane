@@ -83,7 +83,7 @@ export default function SeriesDetail({ series, progress, seriesMeta, onOpen, onU
   return (
     <div className="series-view">
       <div className="series-meta-panel">
-        <SeriesCover path={series.coverCbz} customCoverUrl={series.customCoverUrl} />
+        <SeriesCover path={series.coverCbz} />
         <div className="series-meta-info">
           <div className="series-meta-header">
             <h1 className="series-title">{series.name}</h1>
@@ -266,12 +266,11 @@ function StarRating({ value, onChange }) {
   )
 }
 
-function SeriesCover({ path, customCoverUrl }) {
+function SeriesCover({ path }) {
   const [cover, setCover] = useState(null)
   useEffect(() => {
-    if (customCoverUrl) { setCover(customCoverUrl); return }
     if (path) window.api.getCover(path).then(setCover)
-  }, [path, customCoverUrl])
+  }, [path])
   return (
     <div className="series-cover-large">
       {cover ? <img src={cover} alt="" /> : <div className="cover-placeholder">📖</div>}
