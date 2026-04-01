@@ -61,7 +61,7 @@
           ]
         }
       ],
-      "icon": "build/icons",
+      "icon": "assets/icon.png",
       "category": "Utility"
     }
   },
