@@ -1,0 +1,42 @@
+# Maintainer: your name <your@email.com>
+pkgname=akane-manga-bin
+pkgver=1.1.8
+pkgrel=1
+pkgdesc="A clean dark-themed desktop manga reader"
+arch=('x86_64')
+url="https://github.com/aguasama39/akane"
+license=('MIT')
+depends=('fuse2' 'libnotify' 'nss' 'libxss' 'libxtst')
+options=('!strip')
+source=(
+    "Akane-${pkgver}.AppImage::https://github.com/aguasama39/akane/releases/download/v${pkgver}/Akane-${pkgver}.AppImage"
+    "akane.desktop"
+)
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+    chmod +x "Akane-${pkgver}.AppImage"
+    "./Akane-${pkgver}.AppImage" --appimage-extract
+}
+
+package() {
+    # Install app files
+    install -d "${pkgdir}/opt/akane"
+    cp -r squashfs-root/* "${pkgdir}/opt/akane/"
+
+    # Wrapper script
+    install -d "${pkgdir}/usr/bin"
+    cat > "${pkgdir}/usr/bin/akane" <<'EOF'
+#!/bin/sh
+exec /opt/akane/Akane "$@"
+EOF
+    chmod +x "${pkgdir}/usr/bin/akane"
+
+    # Icon
+    install -Dm644 squashfs-root/.DirIcon \
+        "${pkgdir}/usr/share/icons/hicolor/512x512/apps/akane.png"
+
+    # Desktop entry
+    install -Dm644 "${srcdir}/akane.desktop" \
+        "${pkgdir}/usr/share/applications/akane.desktop"
+}

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Akane
+Comment=A clean dark-themed desktop manga reader
+Exec=akane %U
+Icon=akane
+Type=Application
+Categories=Graphics;Viewer;
+MimeType=application/x-cbz;application/x-cbr;application/zip;
+StartupWMClass=Akane
